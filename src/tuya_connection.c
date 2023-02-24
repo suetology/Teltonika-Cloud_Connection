@@ -3,9 +3,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <syslog.h>
 
 #include "cJSON.h"
-#include "tuya_log.h"
 #include "tuya_error_code.h"
 #include "system_interface.h"
 #include "mqtt_client_interface.h"
@@ -14,20 +14,28 @@
 
 tuya_mqtt_context_t client_instance;
 
-void on_connected(tuya_mqtt_context_t* context, void* user_data)
+void on_connect(tuya_mqtt_context_t* context, void* user_data)
 {
-    TY_LOGI("on connected");
+	syslog(LOG_INFO, "Connected to Tuya cloud");
 }
 
 void on_disconnect(tuya_mqtt_context_t* context, void* user_data)
 {
-    TY_LOGI("on disconnect");
+	syslog(LOG_INFO, "Disconnected from Tuya cloud");
 }
 
-void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_message_t* msg)
+void on_message(tuya_mqtt_context_t* context, void* user_data, const tuyalink_message_t* msg)
 {
-    TY_LOGI("on message id:%s, type:%d, code:%d", msg->msgid, msg->type, msg->code);
-    printf("\r\n");
+	syslog(LOG_INFO, "On message(id: %s, type: %d, code: %d)", msg->msgid, msg->type, msg->code);
+	switch (msg->type) {
+        case THING_TYPE_MODEL_RSP:
+		syslog(LOG_INFO, "Model data: %s", msg->data_string);
+		break;
+
+        case THING_TYPE_PROPERTY_SET:
+		syslog(LOG_INFO, "Property set: %s", msg->data_string);
+            	break;
+    	}
 }
 
 int tuya_connect(struct DeviceInfo *device_info)
@@ -43,14 +51,16 @@ int tuya_connect(struct DeviceInfo *device_info)
                 .device_secret = device_info->device_secret,
                 .keepalive = 100,
                 .timeout_ms = 2000,
-                .on_connected = on_connected,
+                .on_connected = on_connect,
                 .on_disconnect = on_disconnect,
-                .on_messages = on_messages
+                .on_messages = on_message
         });
-        assert(ret == OPRT_OK);
+        if (ret != OPRT_OK) 
+		return ret;
 
         ret = tuya_mqtt_connect(&client_instance);
-        assert(ret == OPRT_OK);
+        if (ret != OPRT_OK)
+		return ret;
 
         return ret;
 }

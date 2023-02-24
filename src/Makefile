@@ -17,4 +17,4 @@ $(BIN): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 clean: 
-	$(RM) $(OBJ) $(BIN)
+	$(RM) $(OBJ) $(BIN) *.gch
