@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 
         struct DeviceInfo *device_info = (struct DeviceInfo *)malloc(sizeof(struct DeviceInfo));  
         if (device_info == NULL) {
-                syslog(LOG_ERR, "Failed starting program");
+                syslog(LOG_ERR, "Failed to start program");
                 closelog();
                 return -1;
         }    
