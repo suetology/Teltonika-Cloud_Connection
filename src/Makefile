@@ -4,7 +4,7 @@ DEPS = $(wildcard *.h)
 SOURCE = $(wildcard *.c)
 OBJ = $(SOURCE:.c=.o)
 
-BIN:= cloud_connector
+BIN:= app
 
 .PHONY: all clean 
 

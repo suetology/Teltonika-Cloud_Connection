@@ -62,10 +62,14 @@ int tuya_connect(struct DeviceInfo *device_info)
         if (ret != OPRT_OK)
 		return ret;
 
+	ret = tuyalink_thing_property_report(&client_instance, device_info->device_id, "{ \"text\": \"hello world\" }");
+	if (ret != OPRT_OK)
+		return ret;
+
         return ret;
 }
 
 void tuya_update() 
 {
-      tuya_mqtt_loop(&client_instance);  
+      	tuya_mqtt_loop(&client_instance); 
 }
