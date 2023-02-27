@@ -11,5 +11,6 @@ struct DeviceInfo {
 
 int tuya_connect(struct DeviceInfo *device_info);
 void tuya_update();
+void tuya_disconnect();
 
 #endif

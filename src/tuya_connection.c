@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/sysinfo.h>
 #include <syslog.h>
 
 #include "cJSON.h"
@@ -13,6 +15,7 @@
 #include "tuya_cacert.h"
 
 tuya_mqtt_context_t client_instance;
+struct DeviceInfo *device; 
 
 void on_connect(tuya_mqtt_context_t* context, void* user_data)
 {
@@ -41,6 +44,7 @@ void on_message(tuya_mqtt_context_t* context, void* user_data, const tuyalink_me
 int tuya_connect(struct DeviceInfo *device_info)
 {
         int ret = OPRT_OK;
+	device = device_info;
 
         ret = tuya_mqtt_init(&client_instance, &(const tuya_mqtt_config_t) {
                 .host = "m1.tuyacn.com",
@@ -62,14 +66,34 @@ int tuya_connect(struct DeviceInfo *device_info)
         if (ret != OPRT_OK)
 		return ret;
 
-	ret = tuyalink_thing_property_report(&client_instance, device_info->device_id, "{ \"text\": \"hello world\" }");
-	if (ret != OPRT_OK)
-		return ret;
-
         return ret;
+}
+
+void send_uptime()
+{
+	struct sysinfo info;
+	sysinfo(&info);
+	long uptime = info.uptime;
+
+	cJSON *data = cJSON_CreateObject();
+	cJSON_AddNumberToObject(data, "uptime", uptime); 
+
+	char *data_str = cJSON_Print(data);
+	if (data_str != NULL) {
+		tuyalink_thing_property_report(&client_instance, device->device_id, data_str);
+		free(data_str);
+	}
+	cJSON_Delete(data);
 }
 
 void tuya_update() 
 {
+	send_uptime();
       	tuya_mqtt_loop(&client_instance); 
+}
+
+void tuya_disconnect()
+{
+	tuya_mqtt_disconnect(&client_instance);
+	tuya_mqtt_deinit(&client_instance);
 }
