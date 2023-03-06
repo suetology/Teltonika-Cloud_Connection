@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
                 closelog();
                 return -2;
         }
-        if (is_daemon && make_daemon() != 0) {
+        if (is_daemon && make_daemon(0) != 0) {
                 syslog(LOG_ERR, "Failed to create a daemon process");
                 closelog();
                 return -3;

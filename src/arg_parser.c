@@ -1,62 +1,20 @@
 #include "arg_parser.h"
 
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <argp.h>
 #include <syslog.h>
 
-static char args_describtion[] = "Required four agruments (-p [Product ID] -i [Device ID] -s [Device Secret]) or one argument -f to specify the location of a config file containing device information in the following format:\n\tproduct_id [id]\n\tdevice_id [id]\n\tdevice_secret [secret]";
+static char args_describtion[] = "-D                    Creates daemon process\n-p [Product ID]         Specifies product ID\n-i [Device ID]            Specifies device ID\n-s [Device secret]         Specifies device secret\n-f [Filepath]           All the device data will be read from this file\n-?                    Shows this message\n";
 
-static struct argp_option options[] = {
-        { "daemon", 'D', 0, 0, "Creates daemon process" },
-        { "product_id", 'p', "Product_ID" },
-        { "device_id", 'i', "Device_ID" },
-        { "device_secret", 's', "Device_secret" },
-        { "config_filepath", 'f', "Filepath", 0, "All the data will be read from this file" }, 
-        { 0 }
-};
-
-struct arguments {
+struct Arguments {
         unsigned daemon;
         char *product_id;
         char *device_id;
         char *device_secret;
         char *config_filepath;
 };
-
-static error_t parse_options(int key, char *arg, struct argp_state *state) 
-{
-        struct arguments *args = state->input;
-
-        switch (key) {
-        case 'D':
-                args->daemon = 1;
-                break;
-        case 'p':
-                args->product_id = arg;
-                break;
-        case 'i':
-                args->device_id = arg;
-                break;
-        case 's':
-                args->device_secret = arg;
-                break;
-        case 'f':
-                args->config_filepath = arg;
-                break;
-
-        case ARGP_KEY_END:
-                if ((args->product_id == NULL || args->device_id == NULL || args->device_secret == NULL) 
-                  && args->config_filepath == NULL) {
-                        argp_failure(state, 1, 0, "Required four agruments (-p [Product ID] -i [Device ID] -s [Device Secret]) or one argument -f to specify the location of a config file. Use --help or -? for more info");
-                        exit(ARGP_ERR_UNKNOWN);
-                        }
-        }
-        return 0;
-}
-
-static struct argp parser = { options, parse_options, 0, args_describtion };
 
 int get_device_from_file(char *filepath, struct DeviceInfo *device_info) 
 {
@@ -89,17 +47,51 @@ int get_device_from_file(char *filepath, struct DeviceInfo *device_info)
         return 0;
 }
 
-int parse_arguments(int argc, char* argv[], unsigned *is_daemon, struct DeviceInfo *device_info)
+void parse_options(int argc, char* argv[], struct Arguments *args)
 {
-        struct arguments args;
-        
+        int c;
+        while ((c = getopt(argc, argv, "Dp:i:s:f:?")) != -1) {
+                switch (c) {
+                case 'D':
+                        args->daemon = 1;
+                        break;
+                case 'p':
+                        args->product_id = optarg;
+                        break;
+                case 'i':
+                        args->device_id = optarg;
+                        break;
+                case 's':
+                        args->device_secret = optarg;
+                        break;
+                case 'f':
+                        args->config_filepath = optarg;
+                        break;
+                case '?':
+                        printf("%s", args_describtion);
+                        exit(0);
+                }
+        }
+
+        if ((args->product_id == NULL || args->device_id == NULL || args->device_secret == NULL) 
+        && args->config_filepath == NULL) {
+                fprintf(stderr, "Required four agruments (-p [Product ID] -i [Device ID] -s [Device Secret]) or one argument -f to specify the location of a config file. Use -? for more info\n");
+                exit(1);
+        }   
+}
+
+int parse_arguments(int argc, char* argv[], unsigned *is_daemon, struct DeviceInfo *device_info) 
+{
+        struct Arguments args;
         args.daemon = 0;
         args.product_id = NULL;
         args.device_id = NULL;
         args.device_secret = NULL;
         args.config_filepath = NULL;
 
-        int error_code = argp_parse(&parser, argc, argv, 0, 0, &args);
+        parse_options(argc, argv, &args);
+
+        int error_code = 0;
 
         if (args.config_filepath == NULL) {
                 strcpy(device_info->product_id, args.product_id);
